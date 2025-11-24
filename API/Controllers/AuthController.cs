@@ -1,0 +1,243 @@
+using Application.Dtos;
+using Application.Dtos.Login;
+using Application.Infrastructures;
+using Application.Interfaces;
+using DataAccess.Dtos.Register;
+using Microsoft.AspNetCore.Authentication.Google;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Mvc;
+using DataAccess.Dtos.Others;
+using Application.Services;
+using DataAccess.Dtos.Employees;
+using Microsoft.AspNetCore.Authorization;
+using DataAccess.Enums;
+using DataAccess.Dtos.Accounts;
+
+namespace API.Controllers
+{
+    [ApiController]
+    [Route("api/[controller]")]
+    public class AuthController : ControllerBase
+    {
+        private readonly IAuthServices _authServices;
+        private readonly INotificationServices _notificationServices;
+        private readonly IOtpServices _otpServices;
+        private readonly IAccountService _accountService;
+
+        public AuthController(IAuthServices authServices, INotificationServices notificationServices, IOtpServices otpServices,
+            IAccountService accountService)
+        {
+            _authServices = authServices;
+            _notificationServices = notificationServices;
+            _otpServices = otpServices;
+            _accountService = accountService;
+        }
+        [HttpPost("register")]
+        public async Task<IActionResult> Register(RegisterRequestDto data)
+        {
+            try
+            {
+                var response = await _authServices.RegisterAsync(data);
+                var otp = await _notificationServices.SendOTP(data.email, 5);
+                await _otpServices.SaveOtpAsync(data.email, otp, 5);
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new ResponseDto<object>
+                {
+                    statusCode = ex.Message.Equals(Message.ACCOUNT_EXISTS) ? HttpStatus.NOT_FOUND : HttpStatus.BAD_REQUEST,
+                    message = ex.Message,
+                    data = null
+                });
+            }
+        }
+        [HttpPost("verify-otp-register")]
+        public async Task<IActionResult> VerifyOtpRegister(VerifyOTPRequestDto data)
+        {
+            var response = await _otpServices.VerifyOtpAsync(data.email, data.otp);
+            if (!response)
+            {
+                return BadRequest(new ResponseDto<object>
+                {
+                    statusCode = HttpStatus.BAD_REQUEST,
+                    message = Message.OTP_INVALID,
+                    data = null
+                });
+            }
+            try
+            {
+                var res = await _authServices.VerifyRegisterAsync(data.email);
+                await _authServices.RegisterCustomerAsync(res);
+                return Ok(new ResponseDto<object>
+                {
+                    statusCode = HttpStatus.OK,
+                    message = Message.REGISTER_SUCCESS,
+                    data = null
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new ResponseDto<object>
+                {
+                    statusCode = HttpStatus.BAD_REQUEST,
+                    message = Message.OTP_INVALID,
+                    data = null
+                });
+            }
+        }
+        [HttpPost("register-for-employee")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> RegisterForEmployee(EmployeeRegisterDto data)
+        {
+
+            try
+            {
+                var newIdReturn = await _authServices.RegisterEmployeeOrTechnicianAsync(data);
+                return Ok(new ResponseDto<int>
+                {
+                    statusCode = HttpStatus.OK,
+                    message = Message.REGISTER_SUCCESS,
+                    data = newIdReturn
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new ResponseDto<object>
+                {
+                    statusCode = HttpStatus.BAD_REQUEST,
+                    message = ex.Message,
+                    data = null
+                });
+            }
+        }
+        [HttpPost("login")]
+        public async Task<IActionResult> Login(LoginRequestDto data)
+        {
+            try
+            {
+                var response = await _authServices.LoginAsync(data, HttpContext);
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                return Unauthorized(new ResponseDto<object>
+                {
+                    statusCode = ex.Message.Equals(Message.ACCOUNT_NOT_FOUND) ? HttpStatus.NOT_FOUND : HttpStatus.UNAUTHORIZED,
+                    message = ex.Message,
+                    data = null
+                });
+            }
+        }
+        [HttpPost("login-google")]
+        public async Task<IActionResult> GoogleCallback([FromBody] string IdToken)
+        {
+            try
+            {
+                var response = await _authServices.LoginGoogleAsync(IdToken, HttpContext);
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                return Unauthorized(new ResponseDto<object>
+                {
+                    statusCode = ex.Message.Equals(Message.ACCOUNT_NOT_FOUND) ? HttpStatus.NOT_FOUND : HttpStatus.UNAUTHORIZED,
+                    message = ex.Message,
+                    data = null
+                });
+            }
+        }
+        [HttpPost("logout")]
+        public async Task<ResponseDto<object>> Logout()
+        {
+            await _authServices.LogoutAsync(HttpContext);
+            return new ResponseDto<object>
+            {
+                statusCode = HttpStatus.OK,
+                message = Message.LOGOUT_SUCCESS,
+                data = null
+            };
+        }
+        [HttpPost("refresh")]
+        public async Task<IActionResult> RefreshTokenAsync()
+        {
+            try
+            {
+                var response = await _authServices.RefreshAsync(HttpContext);
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                return Unauthorized(new ResponseDto<object>
+                {
+                    statusCode = ex.Message.Equals(Message.ACCOUNT_NOT_FOUND) ? HttpStatus.NOT_FOUND : HttpStatus.UNAUTHORIZED,
+                    message = ex.Message,
+                    data = null
+                });
+            }
+        }
+        [HttpPost("sent-otp")]
+        public async Task<IActionResult> SendOTP(string email)
+        {
+            try
+            {
+                var accountId = await _accountService.GetAccountIdByEmail(email);
+                var isBanned = await _accountService.CheckAccountIsBanned(accountId);
+                if (isBanned)
+                {
+                    throw new Exception(Message.ACCOUNT_HAS_BEEN_DISABLED);
+                }
+                var otp = await _notificationServices.SendOTP(email, 5);
+                await _otpServices.SaveOtpAsync(email, otp, 5);
+                return Ok(new ResponseDto<object>
+                {
+                    statusCode = HttpStatus.OK,
+                    message = Message.OTP_HAS_BEEN_SENT,
+                    data = null
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new ResponseDto<object>
+                {
+                    statusCode = ex.Message.Equals(Message.ACCOUNT_NOT_FOUND) ? HttpStatus.NOT_FOUND : HttpStatus.BAD_REQUEST,
+                    message = ex.Message,
+                    data = null
+                });
+            }
+        }
+        [HttpPost("reset-password")]
+        public async Task<IActionResult> ResetPassword(ResetPasswordRequestDto data)
+        {
+            var response = await _otpServices.VerifyOtpAsync(data.email, data.otp);
+            if (!response)
+            {
+                return BadRequest(new ResponseDto<object>
+                {
+                    statusCode = HttpStatus.BAD_REQUEST,
+                    message = Message.OTP_INVALID,
+                    data = null
+                });
+            }
+            try
+            {
+                await _authServices.ResetPassword(data);
+                return Ok(new ResponseDto<object>
+                {
+                    statusCode = HttpStatus.OK,
+                    message = Message.PASSWORD_RESET_SUCCESS,
+                    data = null
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new ResponseDto<object>
+                {
+                    statusCode = ex.Message.Equals(Message.ACCOUNT_NOT_FOUND) ? HttpStatus.NOT_FOUND : HttpStatus.BAD_REQUEST,
+                    message = ex.Message,
+                    data = null
+                });
+            }
+        }
+    }
+}

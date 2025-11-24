@@ -1,0 +1,88 @@
+﻿using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using DataAccess.Dtos.Pagination;
+using DataAccess.Dtos.Part;
+using DataAccess.Dtos.Service;
+using DataAccess.Entities;
+using DataAccess.Helpers;
+using DataAccess.Interfaces;
+using Microsoft.EntityFrameworkCore;
+
+namespace DataAccess.Repositories
+{
+    public class ServiceRepository : GenericRepository<Service>, IServiceRepository
+    {
+
+        public ServiceRepository(EVCareDbContext dbContext) : base(dbContext)
+        {
+        }
+
+        public async Task DeleteByServiceCategoryIdAsync(int id) {
+            await _dbSet
+                .Where(s => s.ServiceCategoryId == id)
+                .ExecuteUpdateAsync(s => s.SetProperty(x => x.Deleted_At, DateTime.UtcNow));
+        }
+
+        public async Task<PageResultDto<ServiceViewModel>> GetActiveServiceAndKeywordWithPagination(ServiceQueryDto model)
+        {
+            if (string.IsNullOrWhiteSpace(model.Keyword))
+            {
+                model.Keyword = string.Empty;
+            }
+            var query = _dbSet
+                .AsNoTracking()
+                .Where(s => s.Deleted_At == null && s.Name.Contains(model.Keyword))
+                .Select(x=>new ServiceViewModel
+                {
+                    Description = x.Description,
+                    Duration = x.Duration,
+                    Id = x.Id,
+                    IsDeleted = false,
+                    Name = x.Name,
+                });
+            query = query.ApplySorting(model.SortField, model.SortOrder);
+
+            return await PaginationHelper.PaginationAsync(query, model.PageSize.Value, model.PageIndex.Value);
+               
+        }
+
+        public async Task<IEnumerable<Service>> GetAllActiveServices(string keyword)
+        {
+            return await _dbSet.AsNoTracking() 
+                .Where(s => s.Name.Contains(keyword) && s.Deleted_At==null).
+                ToListAsync();
+        }
+
+        public async Task<PageResultDto<ServiceViewDetailModel>> GetServiceAndKeywordWithPagination(ServiceQueryDto model)
+        {
+            var query = _dbSet.AsNoTracking()
+                .Where(s => s.Name.Contains(model.Keyword))
+                .Include(s=>s.ServiceParts).ThenInclude(sp=>sp.Part)
+                .Select(x => new ServiceViewDetailModel
+                {
+                    Description = x.Description,
+                    Duration = x.Duration,
+                    Id = x.Id,
+                    IsDeleted = x.Deleted_At!= null,
+                    Name = x.Name,
+                    ServiceCategoryId = x.ServiceCategoryId,
+                    Parts = x.ServiceParts
+                   .Select(sp => new PartAdminViewModel
+                    {
+                        Id = sp.PartId,
+                        Name = sp.Part!.Name,
+                        Image = sp.Part.Image,
+                    }).ToList()
+                });
+            query = query.ApplySorting(model.SortField, model.SortOrder);
+            return await PaginationHelper.PaginationAsync(query, model.PageSize.Value, model.PageIndex.Value);
+                 
+        }
+
+        
+    }
+}
