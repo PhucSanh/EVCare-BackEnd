@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DataAccess.Migrations
 {
     [DbContext(typeof(EVCareDbContext))]
-    [Migration("20251009100027_deleteRealtion1-n")]
-    partial class deleteRealtion1n
+    [Migration("20251124080729_init")]
+    partial class init
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -60,7 +60,6 @@ namespace DataAccess.Migrations
                         .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("Phone")
-                        .IsRequired()
                         .HasMaxLength(11)
                         .HasColumnType("nvarchar(11)");
 
@@ -78,7 +77,10 @@ namespace DataAccess.Migrations
                         .IsUnique();
 
                     b.HasIndex("Phone")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("[Phone] IS NOT NULL");
+
+                    b.HasIndex("First_Name", "Last_Name");
 
                     b.ToTable("Accounts");
 
@@ -137,34 +139,6 @@ namespace DataAccess.Migrations
                         });
                 });
 
-            modelBuilder.Entity("DataAccess.Entities.Alert", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("AppointmentId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("Create_At")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("Is_Read")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Message")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("AppointmentId");
-
-                    b.ToTable("Alerts");
-                });
-
             modelBuilder.Entity("DataAccess.Entities.Application", b =>
                 {
                     b.Property<int>("Id")
@@ -182,14 +156,14 @@ namespace DataAccess.Migrations
                     b.Property<int>("EmployeeId")
                         .HasColumnType("int");
 
-                    b.Property<bool>("IsApproved")
-                        .HasColumnType("bit");
-
                     b.Property<string>("Note")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Reason")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
 
                     b.HasKey("Id");
 
@@ -229,6 +203,9 @@ namespace DataAccess.Migrations
                     b.Property<int?>("OrderId")
                         .HasColumnType("int");
 
+                    b.Property<int?>("ReviewId")
+                        .HasColumnType("int");
+
                     b.Property<int>("Status")
                         .HasColumnType("int");
 
@@ -237,13 +214,45 @@ namespace DataAccess.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("Appointment_Date")
+                        .HasDatabaseName("IX_Appointments_AppointmentDate");
+
                     b.HasIndex("CustomerId");
 
                     b.HasIndex("EmployeeId");
 
+                    b.HasIndex("Status")
+                        .HasDatabaseName("IX_Appointments_Status");
+
                     b.HasIndex("VehicleId");
 
+                    b.HasIndex("OrderId", "Appointment_Date")
+                        .HasDatabaseName("IX_Appointments_OrderId_AppointmentDate");
+
                     b.ToTable("Appointments");
+                });
+
+            modelBuilder.Entity("DataAccess.Entities.AppointmentPartCondition", b =>
+                {
+                    b.Property<int>("PartId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("AppointmentId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TechicianId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Level")
+                        .HasColumnType("int");
+
+                    b.HasKey("PartId", "AppointmentId", "TechicianId");
+
+                    b.HasIndex("AppointmentId");
+
+                    b.HasIndex("TechicianId");
+
+                    b.ToTable("AppointmentPartConditions");
                 });
 
             modelBuilder.Entity("DataAccess.Entities.AppointmentService", b =>
@@ -359,12 +368,15 @@ namespace DataAccess.Migrations
 
                     b.Property<string>("CCCD")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<DateTime>("Deleted_At")
                         .HasColumnType("datetime2");
 
                     b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("TechnicianId")
                         .HasColumnType("int");
 
                     b.Property<DateTime>("Updated_At")
@@ -373,6 +385,9 @@ namespace DataAccess.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("AccountId")
+                        .IsUnique();
+
+                    b.HasIndex("CCCD")
                         .IsUnique();
 
                     b.ToTable("Employees");
@@ -473,12 +488,46 @@ namespace DataAccess.Migrations
                     b.Property<DateTime>("Updated_At")
                         .HasColumnType("datetime2");
 
+                    b.Property<decimal>("Vat")
+                        .HasColumnType("decimal(18,2)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("AppointmentId")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasDatabaseName("IX_Orders_AppointmentId");
 
                     b.ToTable("Orders");
+                });
+
+            modelBuilder.Entity("DataAccess.Entities.OrderDetailLog", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("Created_At")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("OrderId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PartId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrderId");
+
+                    b.HasIndex("PartId");
+
+                    b.ToTable("OrderDetailLogs");
                 });
 
             modelBuilder.Entity("DataAccess.Entities.OrderPart", b =>
@@ -491,6 +540,9 @@ namespace DataAccess.Migrations
 
                     b.Property<int>("TechnicianId")
                         .HasColumnType("int");
+
+                    b.Property<bool>("IsReplaced")
+                        .HasColumnType("bit");
 
                     b.Property<decimal>("Price")
                         .HasColumnType("decimal(18,2)");
@@ -532,7 +584,6 @@ namespace DataAccess.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Image")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Name")
@@ -851,6 +902,52 @@ namespace DataAccess.Migrations
                         });
                 });
 
+            modelBuilder.Entity("DataAccess.Entities.PartHistory", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ActionType")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("ChangeDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("EmployeeName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("NewQuantity")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("NewReplacePrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("NewUnitPrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("OldQuantity")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("OldReplacePrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("OldUnitPrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("PartId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PartId");
+
+                    b.ToTable("PartHistories");
+                });
+
             modelBuilder.Entity("DataAccess.Entities.RefreshToken", b =>
                 {
                     b.Property<int>("Id")
@@ -935,10 +1032,15 @@ namespace DataAccess.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int>("ServiceCategoryId")
+                        .HasColumnType("int");
+
                     b.Property<DateTime>("Updated_At")
                         .HasColumnType("datetime2");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ServiceCategoryId");
 
                     b.ToTable("Services");
 
@@ -951,6 +1053,7 @@ namespace DataAccess.Migrations
                             Description = "Installation of new water and drainage pipes in residential and commercial buildings.",
                             Duration = 2.5m,
                             Name = "Pipe Installation",
+                            ServiceCategoryId = 1,
                             Updated_At = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
                         },
                         new
@@ -961,6 +1064,7 @@ namespace DataAccess.Migrations
                             Description = "Detection and repair of pipe leaks to prevent water damage and reduce waste.",
                             Duration = 1.5m,
                             Name = "Leak Repair",
+                            ServiceCategoryId = 1,
                             Updated_At = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
                         },
                         new
@@ -971,6 +1075,7 @@ namespace DataAccess.Migrations
                             Description = "Installation of electrical wiring for new constructions or renovations.",
                             Duration = 3.0m,
                             Name = "Wiring Installation",
+                            ServiceCategoryId = 1,
                             Updated_At = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
                         },
                         new
@@ -981,6 +1086,7 @@ namespace DataAccess.Migrations
                             Description = "Repair and replacement of broken or faulty light fixtures and switches.",
                             Duration = 1.0m,
                             Name = "Light Fixture Repair",
+                            ServiceCategoryId = 2,
                             Updated_At = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
                         },
                         new
@@ -991,6 +1097,7 @@ namespace DataAccess.Migrations
                             Description = "Installation of new air conditioning units for residential and office spaces.",
                             Duration = 4.0m,
                             Name = "Air Conditioner Installation",
+                            ServiceCategoryId = 1,
                             Updated_At = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
                         },
                         new
@@ -1001,6 +1108,7 @@ namespace DataAccess.Migrations
                             Description = "Regular inspection and maintenance of heating systems to ensure efficiency.",
                             Duration = 2.0m,
                             Name = "Heater Maintenance",
+                            ServiceCategoryId = 3,
                             Updated_At = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
                         },
                         new
@@ -1011,6 +1119,7 @@ namespace DataAccess.Migrations
                             Description = "Repair and restoration of wooden furniture such as chairs, tables, and cabinets.",
                             Duration = 2.0m,
                             Name = "Furniture Repair",
+                            ServiceCategoryId = 5,
                             Updated_At = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
                         },
                         new
@@ -1021,6 +1130,7 @@ namespace DataAccess.Migrations
                             Description = "Custom installation of wooden doors and windows with fittings.",
                             Duration = 3.5m,
                             Name = "Door and Window Installation",
+                            ServiceCategoryId = 4,
                             Updated_At = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
                         },
                         new
@@ -1031,6 +1141,7 @@ namespace DataAccess.Migrations
                             Description = "Painting of walls, ceilings, and trim inside residential and office buildings.",
                             Duration = 5.0m,
                             Name = "Interior Painting",
+                            ServiceCategoryId = 5,
                             Updated_At = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
                         },
                         new
@@ -1041,7 +1152,70 @@ namespace DataAccess.Migrations
                             Description = "Weather-resistant painting of exterior walls and structures.",
                             Duration = 6.0m,
                             Name = "Exterior Painting",
+                            ServiceCategoryId = 2,
                             Updated_At = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
+                        });
+                });
+
+            modelBuilder.Entity("DataAccess.Entities.ServiceCategory", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("Deleted_At")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ServiceCategories");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Deleted_At = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Description = "Responsible for diagnosing, repairing, and maintaining vehicle engines, including fuel systems, cooling systems, and performance optimization.",
+                            Name = "Engine Specialist"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Deleted_At = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Description = "Focuses on manual and automatic transmissions, clutches, gear systems, and drivetrains to ensure smooth power delivery.",
+                            Name = "Transmission Specialist"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Deleted_At = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Description = "Handles inspection, repair, and replacement of braking systems, including pads, rotors, calipers, and hydraulic lines.",
+                            Name = "Brake Specialist"
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Deleted_At = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Description = "Works on vehicle electrical components such as wiring, batteries, alternators, lighting, sensors, and onboard electronics.",
+                            Name = "Electrical Systems Specialist"
+                        },
+                        new
+                        {
+                            Id = 5,
+                            Deleted_At = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Description = "Maintains and repairs suspension systems, steering components, and alignment to ensure vehicle stability and handling.",
+                            Name = "Suspension and Steering Specialist"
                         });
                 });
 
@@ -1054,6 +1228,10 @@ namespace DataAccess.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("Address")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("AddressName")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
@@ -1094,6 +1272,21 @@ namespace DataAccess.Migrations
                     b.ToTable("ServiceCenters");
                 });
 
+            modelBuilder.Entity("DataAccess.Entities.ServicePart", b =>
+                {
+                    b.Property<int>("ServiceId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PartId")
+                        .HasColumnType("int");
+
+                    b.HasKey("ServiceId", "PartId");
+
+                    b.HasIndex("PartId");
+
+                    b.ToTable("ServiceParts");
+                });
+
             modelBuilder.Entity("DataAccess.Entities.Technician", b =>
                 {
                     b.Property<int>("Id")
@@ -1101,6 +1294,9 @@ namespace DataAccess.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CompletedOrders")
+                        .HasColumnType("int");
 
                     b.Property<DateTime>("Created_At")
                         .HasColumnType("datetime2");
@@ -1111,6 +1307,9 @@ namespace DataAccess.Migrations
                     b.Property<double>("ExpYear")
                         .HasColumnType("float");
 
+                    b.Property<int>("KPIPerDays")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
 
                     b.HasIndex("EmployeeId")
@@ -1119,7 +1318,22 @@ namespace DataAccess.Migrations
                     b.ToTable("Technicians");
                 });
 
-            modelBuilder.Entity("DataAccess.Entities.TechnicianCategory", b =>
+            modelBuilder.Entity("DataAccess.Entities.TechnicianSkill", b =>
+                {
+                    b.Property<int>("TechnicianId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ServiceId")
+                        .HasColumnType("int");
+
+                    b.HasKey("TechnicianId", "ServiceId");
+
+                    b.HasIndex("ServiceId");
+
+                    b.ToTable("TechnicianSkills");
+                });
+
+            modelBuilder.Entity("DataAccess.Entities.TechnicianWorkingSession", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -1127,90 +1341,11 @@ namespace DataAccess.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<DateTime>("Deleted_At")
+                    b.Property<DateTime?>("EndTime")
                         .HasColumnType("datetime2");
-
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("TechnicianCategories");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            Deleted_At = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            Description = "Responsible for diagnosing, repairing, and maintaining vehicle engines, including fuel systems, cooling systems, and performance optimization.",
-                            Name = "Engine Specialist"
-                        },
-                        new
-                        {
-                            Id = 2,
-                            Deleted_At = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            Description = "Focuses on manual and automatic transmissions, clutches, gear systems, and drivetrains to ensure smooth power delivery.",
-                            Name = "Transmission Specialist"
-                        },
-                        new
-                        {
-                            Id = 3,
-                            Deleted_At = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            Description = "Handles inspection, repair, and replacement of braking systems, including pads, rotors, calipers, and hydraulic lines.",
-                            Name = "Brake Specialist"
-                        },
-                        new
-                        {
-                            Id = 4,
-                            Deleted_At = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            Description = "Works on vehicle electrical components such as wiring, batteries, alternators, lighting, sensors, and onboard electronics.",
-                            Name = "Electrical Systems Specialist"
-                        },
-                        new
-                        {
-                            Id = 5,
-                            Deleted_At = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            Description = "Maintains and repairs suspension systems, steering components, and alignment to ensure vehicle stability and handling.",
-                            Name = "Suspension and Steering Specialist"
-                        });
-                });
-
-            modelBuilder.Entity("DataAccess.Entities.TechnicianSkill", b =>
-                {
-                    b.Property<int>("TechnicianId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("TechnicianCategoryId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("ServiceId")
-                        .HasColumnType("int");
-
-                    b.HasKey("TechnicianId", "TechnicianCategoryId", "ServiceId");
-
-                    b.HasIndex("ServiceId");
-
-                    b.HasIndex("TechnicianCategoryId");
-
-                    b.ToTable("TechnicianSkills");
-                });
-
-            modelBuilder.Entity("DataAccess.Entities.TechnicianWorkingSession", b =>
-                {
-                    b.Property<int>("TechnicianId")
-                        .HasColumnType("int");
 
                     b.Property<int>("OrderId")
                         .HasColumnType("int");
-
-                    b.Property<DateTime?>("EndTime")
-                        .HasColumnType("datetime2");
 
                     b.Property<DateTime>("StartTime")
                         .ValueGeneratedOnAdd()
@@ -1220,9 +1355,16 @@ namespace DataAccess.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("int");
 
-                    b.HasKey("TechnicianId", "OrderId");
+                    b.Property<int>("TechnicianId")
+                        .HasColumnType("int");
 
-                    b.HasIndex("OrderId");
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrderId")
+                        .HasDatabaseName("IX_TechnicianWorkingSessions_OrderId");
+
+                    b.HasIndex("TechnicianId", "Status")
+                        .HasDatabaseName("IX_TechnicianWorkingSessions_TechnicianId_Status");
 
                     b.ToTable("TechnicianWorkingSessions");
                 });
@@ -1287,6 +1429,21 @@ namespace DataAccess.Migrations
                         });
                 });
 
+            modelBuilder.Entity("DataAccess.Entities.VehiclePartCompatibility", b =>
+                {
+                    b.Property<int>("VehicleCategoryId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PartCategoryId")
+                        .HasColumnType("int");
+
+                    b.HasKey("VehicleCategoryId", "PartCategoryId");
+
+                    b.HasIndex("PartCategoryId");
+
+                    b.ToTable("VehiclePartCompatibilities");
+                });
+
             modelBuilder.Entity("DataAccess.Entities.VehiclesCategory", b =>
                 {
                     b.Property<int>("Id")
@@ -1298,10 +1455,25 @@ namespace DataAccess.Migrations
                     b.Property<DateTime>("Deleted_At")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("Model3DUrl")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
+
+                    b.Property<decimal?>("ScaleX")
+                        .HasPrecision(18, 7)
+                        .HasColumnType("decimal(18,7)");
+
+                    b.Property<decimal?>("ScaleY")
+                        .HasPrecision(18, 7)
+                        .HasColumnType("decimal(18,7)");
+
+                    b.Property<decimal?>("ScaleZ")
+                        .HasPrecision(18, 7)
+                        .HasColumnType("decimal(18,7)");
 
                     b.HasKey("Id");
 
@@ -1326,17 +1498,6 @@ namespace DataAccess.Migrations
                             Deleted_At = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             Name = "Coupe"
                         });
-                });
-
-            modelBuilder.Entity("DataAccess.Entities.Alert", b =>
-                {
-                    b.HasOne("DataAccess.Entities.Appointment", "Appointment")
-                        .WithMany("Alerts")
-                        .HasForeignKey("AppointmentId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Appointment");
                 });
 
             modelBuilder.Entity("DataAccess.Entities.Application", b =>
@@ -1374,6 +1535,33 @@ namespace DataAccess.Migrations
                     b.Navigation("Employee");
 
                     b.Navigation("Vehicle");
+                });
+
+            modelBuilder.Entity("DataAccess.Entities.AppointmentPartCondition", b =>
+                {
+                    b.HasOne("DataAccess.Entities.Appointment", "Appointment")
+                        .WithMany("AppointmentPartConditions")
+                        .HasForeignKey("AppointmentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("DataAccess.Entities.Part", "Part")
+                        .WithMany("AppointmentPartConditions")
+                        .HasForeignKey("PartId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("DataAccess.Entities.Technician", "Technician")
+                        .WithMany("AppointmentPartConditions")
+                        .HasForeignKey("TechicianId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Appointment");
+
+                    b.Navigation("Part");
+
+                    b.Navigation("Technician");
                 });
 
             modelBuilder.Entity("DataAccess.Entities.AppointmentService", b =>
@@ -1458,6 +1646,25 @@ namespace DataAccess.Migrations
                     b.Navigation("Appointment");
                 });
 
+            modelBuilder.Entity("DataAccess.Entities.OrderDetailLog", b =>
+                {
+                    b.HasOne("DataAccess.Entities.Order", "Order")
+                        .WithMany("OrderDetailLogs")
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("DataAccess.Entities.Part", "Part")
+                        .WithMany("OrderDetailLogs")
+                        .HasForeignKey("PartId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Order");
+
+                    b.Navigation("Part");
+                });
+
             modelBuilder.Entity("DataAccess.Entities.OrderPart", b =>
                 {
                     b.HasOne("DataAccess.Entities.Order", "Order")
@@ -1496,6 +1703,17 @@ namespace DataAccess.Migrations
                     b.Navigation("Category");
                 });
 
+            modelBuilder.Entity("DataAccess.Entities.PartHistory", b =>
+                {
+                    b.HasOne("DataAccess.Entities.Part", "Part")
+                        .WithMany("PartHistories")
+                        .HasForeignKey("PartId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Part");
+                });
+
             modelBuilder.Entity("DataAccess.Entities.RefreshToken", b =>
                 {
                     b.HasOne("DataAccess.Entities.Account", "Account")
@@ -1510,12 +1728,42 @@ namespace DataAccess.Migrations
             modelBuilder.Entity("DataAccess.Entities.Review", b =>
                 {
                     b.HasOne("DataAccess.Entities.Appointment", "Appointment")
-                        .WithOne("Reviews")
+                        .WithOne("Review")
                         .HasForeignKey("DataAccess.Entities.Review", "AppointmentId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Appointment");
+                });
+
+            modelBuilder.Entity("DataAccess.Entities.Service", b =>
+                {
+                    b.HasOne("DataAccess.Entities.ServiceCategory", "ServiceCategory")
+                        .WithMany("Services")
+                        .HasForeignKey("ServiceCategoryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ServiceCategory");
+                });
+
+            modelBuilder.Entity("DataAccess.Entities.ServicePart", b =>
+                {
+                    b.HasOne("DataAccess.Entities.Part", "Part")
+                        .WithMany("ServiceParts")
+                        .HasForeignKey("PartId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("DataAccess.Entities.Service", "Service")
+                        .WithMany("ServiceParts")
+                        .HasForeignKey("ServiceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Part");
+
+                    b.Navigation("Service");
                 });
 
             modelBuilder.Entity("DataAccess.Entities.Technician", b =>
@@ -1537,12 +1785,6 @@ namespace DataAccess.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("DataAccess.Entities.TechnicianCategory", "TechnicianCategories")
-                        .WithMany("TechnicianSkills")
-                        .HasForeignKey("TechnicianCategoryId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("DataAccess.Entities.Technician", "Technician")
                         .WithMany("TechnicianSkills")
                         .HasForeignKey("TechnicianId")
@@ -1552,8 +1794,6 @@ namespace DataAccess.Migrations
                     b.Navigation("Service");
 
                     b.Navigation("Technician");
-
-                    b.Navigation("TechnicianCategories");
                 });
 
             modelBuilder.Entity("DataAccess.Entities.TechnicianWorkingSession", b =>
@@ -1594,6 +1834,25 @@ namespace DataAccess.Migrations
                     b.Navigation("Customer");
                 });
 
+            modelBuilder.Entity("DataAccess.Entities.VehiclePartCompatibility", b =>
+                {
+                    b.HasOne("DataAccess.Entities.PartCategory", "PartCategory")
+                        .WithMany("VehiclePartCompatibilities")
+                        .HasForeignKey("PartCategoryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("DataAccess.Entities.VehiclesCategory", "Vehicle")
+                        .WithMany("VehiclePartCompatibilities")
+                        .HasForeignKey("VehicleCategoryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("PartCategory");
+
+                    b.Navigation("Vehicle");
+                });
+
             modelBuilder.Entity("DataAccess.Entities.Account", b =>
                 {
                     b.Navigation("Customer");
@@ -1605,16 +1864,15 @@ namespace DataAccess.Migrations
 
             modelBuilder.Entity("DataAccess.Entities.Appointment", b =>
                 {
-                    b.Navigation("Alerts");
-
                     b.Navigation("AppointmentImages");
+
+                    b.Navigation("AppointmentPartConditions");
 
                     b.Navigation("AppointmentServices");
 
                     b.Navigation("Order");
 
-                    b.Navigation("Reviews")
-                        .IsRequired();
+                    b.Navigation("Review");
                 });
 
             modelBuilder.Entity("DataAccess.Entities.Customer", b =>
@@ -1639,6 +1897,8 @@ namespace DataAccess.Migrations
                 {
                     b.Navigation("Invoice");
 
+                    b.Navigation("OrderDetailLogs");
+
                     b.Navigation("OrderParts");
 
                     b.Navigation("TechnicianWorkingSessions");
@@ -1646,31 +1906,45 @@ namespace DataAccess.Migrations
 
             modelBuilder.Entity("DataAccess.Entities.Part", b =>
                 {
+                    b.Navigation("AppointmentPartConditions");
+
+                    b.Navigation("OrderDetailLogs");
+
                     b.Navigation("OrderParts");
+
+                    b.Navigation("PartHistories");
+
+                    b.Navigation("ServiceParts");
                 });
 
             modelBuilder.Entity("DataAccess.Entities.PartCategory", b =>
                 {
                     b.Navigation("Parts");
+
+                    b.Navigation("VehiclePartCompatibilities");
                 });
 
             modelBuilder.Entity("DataAccess.Entities.Service", b =>
                 {
+                    b.Navigation("ServiceParts");
+
                     b.Navigation("TechnicianSkills");
+                });
+
+            modelBuilder.Entity("DataAccess.Entities.ServiceCategory", b =>
+                {
+                    b.Navigation("Services");
                 });
 
             modelBuilder.Entity("DataAccess.Entities.Technician", b =>
                 {
+                    b.Navigation("AppointmentPartConditions");
+
                     b.Navigation("OrderParts");
 
                     b.Navigation("TechnicianSkills");
 
                     b.Navigation("TechnicianWorkingSessions");
-                });
-
-            modelBuilder.Entity("DataAccess.Entities.TechnicianCategory", b =>
-                {
-                    b.Navigation("TechnicianSkills");
                 });
 
             modelBuilder.Entity("DataAccess.Entities.Vehicle", b =>
@@ -1680,6 +1954,8 @@ namespace DataAccess.Migrations
 
             modelBuilder.Entity("DataAccess.Entities.VehiclesCategory", b =>
                 {
+                    b.Navigation("VehiclePartCompatibilities");
+
                     b.Navigation("Vehicles");
                 });
 #pragma warning restore 612, 618

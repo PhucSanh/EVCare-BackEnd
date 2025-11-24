@@ -350,7 +350,7 @@ namespace Application.Tests {
             orderRepository.Setup(t => t.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((DataAccess.Entities.Order?)null);
             var orderService = _fixture.Create<Application.Services.OrderService>();
             var result = await Assert.ThrowsAsync<Exception>(async () =>
-                await orderService.UpdateOrderAsync(model)
+                await orderService.UpdateOrderAsync(model,1)
             );
             Assert.Equal($"The Order {model.Id} doesn't not exist", result.Message);
         }
@@ -365,7 +365,7 @@ namespace Application.Tests {
                 });
             var orderService = _fixture.Create<Application.Services.OrderService>();
             var result = await Assert.ThrowsAsync<Exception>(async () =>
-                await orderService.UpdateOrderAsync(model)
+                await orderService.UpdateOrderAsync(model,1)
             );
             Assert.Equal($"The Order {model.Id} haved canceled or completed", result.Message);
         }
@@ -380,7 +380,7 @@ namespace Application.Tests {
                 });
             var orderService = _fixture.Create<Application.Services.OrderService>();
             var result = await Assert.ThrowsAsync<Exception>(async () =>
-                await orderService.UpdateOrderAsync(model)
+                await orderService.UpdateOrderAsync(model,1)
             );
             Assert.Equal($"The Order {model.Id} haved canceled or completed", result.Message);
         }
@@ -413,7 +413,7 @@ namespace Application.Tests {
             partRepositoryMock.Setup(x => x.GetByIdAsync(1)).ReturnsAsync(()=>null);
             var orderService = _fixture.Create<Application.Services.OrderService>();
             var result = Assert.ThrowsAsync<Exception>(async () =>
-                await orderService.UpdateOrderAsync(model)
+                await orderService.UpdateOrderAsync(model,1)
             );
             Assert.Equal("Part 1 not found", result.Result.Message);
 
@@ -461,7 +461,7 @@ namespace Application.Tests {
 
             var orderService = _fixture.Create<Application.Services.OrderService>();
             var result = Assert.ThrowsAsync<Exception>(async () =>
-                await orderService.UpdateOrderAsync(model)
+                await orderService.UpdateOrderAsync(model,1)
             );
             Assert.Equal("Part 5 not found", result.Result.Message);
         }
@@ -508,7 +508,7 @@ namespace Application.Tests {
 
             var orderService = _fixture.Create<Application.Services.OrderService>();
             var result = Assert.ThrowsAsync<Exception>(async () =>
-                await orderService.UpdateOrderAsync(model)
+                await orderService.UpdateOrderAsync(model,1)
             );
             Assert.Equal("Part 5 doesn't have enough stock", result.Result.Message);
         }
@@ -565,7 +565,7 @@ namespace Application.Tests {
                 }
             };
             var orderService = _fixture.Create<Application.Services.OrderService>();
-            await orderService.UpdateOrderAsync(model);
+            await orderService.UpdateOrderAsync(model,1);
             unitOfWorkMock.Verify(u => u.ExecuteInTransactionAsync(It.IsAny<Func<Task>>()), Times.Once);
             orderRepository.Verify(x => x.RemoveOrderPartsAsync(It.IsAny<int>()), Times.Once);
         }
